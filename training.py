@@ -6,6 +6,7 @@ import seaborn as sns
 from sklearn.pipeline import make_pipeline
 from sklearn import preprocessing
 from sklearn import svm
+import sklearn.metrics as skm
 import sklearn.model_selection as skmod
 
 class state(object):
@@ -68,6 +69,17 @@ def print_confusion_matrix(confusion_matrix, class_names, figsize = (10,7), font
     plt.xlabel('Predicted label')
     return fig
 
+def print_prob_distribution(prob_dtb,label,title,figsize=(10,7), fontsize = 10):
+    df = pd.DataFrame(prob_dtb,index=label,columns = ['value'])
+    df = df.reset_index(level=0)
+    fig = plt.figure(figsize=figsize)
+    barplot = sns.barplot(x='value',y='index',data=df)
+    plt.title(title)
+    plt.subplots_adjust(left=0.4)
+    plt.savefig('./prob_distribution_figures/'+title)
+    plt.clf()
+    return fig
+    
 def build_confusion_matrix(true,pred,label,isProba,distance):
     if isProba:
         new_pred = []
@@ -81,22 +93,22 @@ def build_confusion_matrix(true,pred,label,isProba,distance):
                       max = pred[i][j]
             if pred[i][curr[0]] - max < distance:
                  curr.append(max_index)
-                 print(curr[0],curr[1])
             new_pred.append(curr)
-        pred = new_pred  
+        pred_index = new_pred
     
-    cfm = np.zeros([len(label),len(label)],dtype='i')
+    new_pred = np.zeros(len(true))
     
     for i in range(0,len(true)):
-        if true[i] == pred[i][0]:
-            cfm[true[i]][true[i]]+=1
-        elif true[i] in pred[i]:
-            print('ambigous-index:'+str(i)+' speciesID'+str(pred[i]))
+        print('true:'+str(true[i])+' pred:'+str(pred_index[i]))
+        if true[i] != pred_index[i][0]:
+            title = 'index:'+str(i)+' species:'+''+str(label[true[i]])
+            print_prob_distribution(pred[i],label,title)
+        if true[i] in pred_index[i]:
+            new_pred[i] = true[i]
         else:
-            cfm[true[i]][pred[i]]+=1
+            new_pred[i] = pred_index[i][0]
     
-    return pred,print_confusion_matrix(cfm,label)
-        
+    return new_pred,print_confusion_matrix(skm.confusion_matrix(true,new_pred),label)
 
 def construct_kmer(num,species,sequences):
     index = 0
@@ -106,15 +118,8 @@ def construct_kmer(num,species,sequences):
         index += 1
     list_species = [dict_species[i] for i in species]
     
-    dict_kmer = {'A':0,
-            'C':1,
-            'G':2,
-            'T':3,
-            'N':4,
-            'W':4,
-            'Y':4,
-            'M':4
-            }
+    dict_kmer = {'A':0,'C':1,'G':2,'T':3,
+                 'N':4,'W':4,'Y':4,'M':4}
     array = []
     root = state()
     root.seq = '1'
@@ -162,11 +167,11 @@ def training(X_train,y_train):
 if __name__ == '__main__':
     dataset_meta_100 = dataset('test_files/traning_labels_MetaRNA'
                                ,'test_files/simulated.fna') 
-    kmers, species = dataset_meta_100.build_metrics(4)
-    X_train, X_test, y_train, y_test = skmod.train_test_split(kmers,species,test_size = 0.1,random_state =10086)
+    kmers, species = dataset_meta_100.build_metrics(8)
+    X_train, X_test, y_train, y_test = skmod.train_test_split(kmers,species,test_size = 0.3,random_state =10086)
     label = np.unique(dataset_meta_100.data['species'])
     
     fit = training(X_train,y_train)
     
     predict_proba = fit.predict_proba(X_test)
-    build_confusion_matrix(y_test,predict_proba,label,True,0.95)
+    pred, cm = build_confusion_matrix(y_test,predict_proba,label,True,0.9)
