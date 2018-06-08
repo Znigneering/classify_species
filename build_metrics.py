@@ -173,14 +173,14 @@ def build_data_frame_by_hit(true,pred,labels,legend):
           if true[i] == pred[i]:
                if true[i] == 0:
                     species_tn.append(bytes.decode(b" ".join(labels[i]['species'].split()[0:2])))
-               elif true[i] == 16:
+               else:
                     fl.write(bytes.decode(labels[i][0])+'\t'+str(labels[i][1])+'\t'+str(labels[i][2])+'\t'+bytes.decode(labels[i][3])+'\t'+bytes.decode(labels[i][4])+'\n')
                     species_tp.append(bytes.decode(b" ".join(labels[i]['species'].split()[0:2])))
           else:
-               if true[i] == 0 and pred[i] == 16:
+               if true[i] == 0:
                     count += 1
                     species_fp.append(bytes.decode(b" ".join(labels[i]['species'].split()[0:2])))
-               elif true[i] == 16:
+               else:
                     species_fn.append(bytes.decode(b" ".join(labels[i]['species'].split()[0:2])))
      tp = pd.DataFrame({'species' : species_tp,
                         'count' : np.zeros(len(species_tp))}).groupby('species').count()
@@ -215,15 +215,18 @@ if __name__ == '__main__':
      
      pred_meta_20 = find_pred_rna(build_meta(tf+'mt.coord',20),labels_20,True)
      pred_meta_100 = find_pred_rna(build_meta(tf+'mt.coord',100),labels_100,True)
+     pred_ribo_100 = find_pred_rna(build_ribo(tf+'rb_5s.tsv',tf+'rb_16s.tsv',tf+'rb_23s.tsv'),labels_100,True) 
+     pred_sortme_100 = find_pred_rna(build_sortme(tf+'sm.sam',tf+'sm_5s.fasta',tf+'sm_16s.fasta',tf+'sm_23s.fasta'),labels_100,True)
 
      true_100 = find_true_rna(labels_100)
      true_20 = find_true_rna(labels_20)
      
-     pmt_16_20,rmt_16_20 = build_data_frame_by_hit(true_20,pred_meta_20,labels_20,'MetaRNA')
-     pmt_16_100,rmt_16_100 = build_data_frame_by_hit(true_100,pred_meta_100,labels_100,'MetaRNA')
+     pmt_100,rmt_100 = build_data_frame_by_hit(true_100,pred_meta_100,labels_100,'MetaRNA')
+     prb_100,rrb_100 = build_data_frame_by_hit(true_100,pred_ribo_100,labels_100,'Ribopicker')
+     psm_100,rsm_100 = build_data_frame_by_hit(true_100,pred_sortme_100,labels_100,'SortmeRNA')
 
-     recall = pd.concat([rmt_16_100,rmt_16_20],keys=['100','20']).reset_index(level=0)
-     precision = pd.concat([pmt_16_100,pmt_16_20],keys=['100','20']).reset_index(level=0)
+     recall = pd.concat([rmt_100,rrb_100,rsm_100],keys=['Meta','Ribo','Sortme']).reset_index(level=0)
+     precision = pd.concat([pmt_100,prb_100,psm_100],keys=['Meta','Ribo','Sortme']).reset_index(level=0)
 
      
 

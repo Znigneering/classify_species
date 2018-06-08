@@ -76,7 +76,7 @@ def print_prob_distribution(prob_dtb,label,title,figsize=(10,7), fontsize = 10):
     barplot = sns.barplot(x='value',y='index',data=df)
     plt.title(title)
     plt.subplots_adjust(left=0.4)
-    plt.savefig('./prob_distribution_figures/'+title+'.jpg')
+    plt.savefig('./prob_distribution_figures/'+title+'.png')
     plt.close(fig)
     return fig
     
@@ -102,21 +102,21 @@ def build_confusion_matrix(true,pred,label,isProba,distance,save = False):
         if true[i] in pred_index[i]:
             if true[i] != pred_index[i][0]:
                 if save:
-                    title = 'index:'+str(i)+'_species:'+str(label[true[i]])+'_Ambiguous'
+                    title = 'Ambiguous_index:'+str(i)+'_species:'+str(label[true[i]])
                     print_prob_distribution(pred[i],label,title)
                 new_pred[i] = 0
             else:
                 if save:
-                    title = 'index:'+str(i)+'_species:'+str(label[true[i]])+'_Correct'
+                    title = 'Correct_index:'+str(i)+'_species:'+str(label[true[i]])
                     print_prob_distribution(pred[i],label,title)
-                new_pred[i] = true[i]
+                new_pred[i] = true[i]+1
         else:
             if save:
-                title = 'index:'+str(i)+'_species:'+str(label[true[i]])+'_Misspredict'
+                title = 'Misspredict_index:'+str(i)+'_species:'+str(label[true[i]])
                 print_prob_distribution(pred[i],label,title)
-            new_pred[i] = pred_index[i][0]
+            new_pred[i] = pred_index[i][0]+1
     
-    return new_pred,print_confusion_matrix(skm.confusion_matrix([i+1 for i in true],new_pred),['Ambigous']+label)
+    return new_pred,print_confusion_matrix(skm.confusion_matrix([i+1 for i in true],new_pred),['Ambiguous']+label)
 
 def construct_kmer(num,species,sequences):
     index = 0
@@ -167,7 +167,7 @@ if __name__ == '__main__':
     dataset_meta_100 = dataset('test_files/traning_labels_MetaRNA'
                                ,'test_files/simulated.fna') 
     kmers, species,states = dataset_meta_100.build_metrics(4)
-    X_train, X_test, y_train, y_test = skmod.train_test_split(kmers,species,test_size = 0.1,random_state =10086)
+    X_train, X_test, y_train, y_test = skmod.train_test_split(kmers,species,test_size = 0.3,random_state =10086)
     label = []
     for i in np.unique(dataset_meta_100.data['species']):
         label.append(i)
@@ -178,4 +178,4 @@ if __name__ == '__main__':
     fit = clf.fit(X_train,y_train)
     
     predict_proba = fit.predict_proba(X_test)
-    pred, cm = build_confusion_matrix(y_test,predict_proba,label,True,0.9)
+    pred, cm = build_confusion_matrix(y_test,predict_proba,label,True,0.9,save=True)
